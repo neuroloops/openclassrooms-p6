@@ -71,7 +71,6 @@ exports.getAllSauce = (req, res) => {
 };
 
 exports.like = (req, res) => {
-  console.log('req.params.id', req.params.id);
   const userAction = req.body;
   const { userId } = userAction;
   const countLike = (arg) => {
@@ -79,55 +78,36 @@ exports.like = (req, res) => {
       _id: arg
     })
       .then((sauce) => {
-        console.log('user like:', sauce.usersLiked.length);
-        let likes = sauce.usersLiked.length;
-
-        console.log('user disliked:', sauce.usersDisliked.length);
-        const dislikes = sauce.usersDisliked.length;
+        const { usersLiked } = sauce;
+        const { usersDisliked } = sauce;
 
         if (userAction.like === 1) {
-          console.log('sauce', sauce);
-          sauce.likes = likes;
-          sauce.dislikes = dislikes;
-          console.log('sauceUpdate', sauce);
-          Sauce.updateOne(
-            { _id: req.params.id },
-            {
-              usersLiked: userId,
-              likes,
-              dislikes
-            }
-          )
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch((error) => res.status(400).json({ error }));
+          usersLiked.push(userId);
         } else if (userAction.like === 0) {
-          console.log('like = 0');
-          console.log(userAction);
+          const indexLiked = usersLiked.indexOf(userId);
+          const indexDisliked = usersDisliked.indexOf(userId);
 
-          likes -= 1;
-          Sauce.updateOne(
-            { _id: req.params.id },
-            {
-              likes,
-              dislikes
-            }
-          )
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch((error) => res.status(400).json({ error }));
+          indexLiked !== -1
+            ? usersLiked.splice(indexLiked, 1)
+            : usersDisliked.splice(indexDisliked, 1);
         } else if (userAction.like === -1) {
-          console.log('like = -1');
-
-          Sauce.updateOne(
-            { _id: req.params.id },
-            {
-              ...userAction,
-              dislikes: 1
-            }
-          )
-            .then(() => res.status(200).json({ message: 'Objet modifié !' }))
-            .catch((error) => res.status(400).json({ error }));
+          usersDisliked.push(userId);
         }
 
+        const likes = sauce.usersLiked.length;
+
+        const dislikes = sauce.usersDisliked.length;
+        Sauce.updateOne(
+          { _id: req.params.id },
+          {
+            usersLiked,
+            usersDisliked,
+            likes,
+            dislikes
+          }
+        )
+          .then(() => res.status(200).json({ message: 'Objet modifié !' }))
+          .catch((error) => res.status(400).json({ error }));
         return { likes, dislikes };
       })
       .catch((error) => {
